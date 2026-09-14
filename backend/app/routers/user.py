@@ -1,5 +1,7 @@
 import json
 import secrets
+import time
+from collections import defaultdict, deque
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -13,6 +15,7 @@ from ..services.access import LOG_LOGIN, LOG_SYSTEM, group_models
 from ..services.billing import quota_to_usd
 
 router = APIRouter()
+_login_attempts: dict[str, deque[float]] = defaultdict(deque)
 
 
 class LoginBody(BaseModel):
@@ -51,13 +54,22 @@ def user_payload(user: User) -> dict:
 
 @router.post("/api/user/login")
 def login(body: LoginBody, request: Request, db: Session = Depends(get_db)):
+    ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    attempts = _login_attempts[ip]
+    while attempts and now - attempts[0] > 300:
+        attempts.popleft()
+    if len(attempts) >= 10:
+        raise HTTPException(status_code=429, detail="登录尝试过于频繁，请稍后再试")
     user = (
         db.query(User)
         .filter((User.username == body.username) | (User.email == body.username))
         .first()
     )
     if not user or not verify_password(body.password, user.password_hash):
+        attempts.append(now)
         raise HTTPException(status_code=401, detail="用户名或密码错误")
+    attempts.clear()
     if user.status != 1:
         raise HTTPException(status_code=403, detail="该账号已被禁用")
     token = create_access_token(user)
