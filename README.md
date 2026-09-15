@@ -1,6 +1,6 @@
 # AiDream · THINK-AI 本地复刻
 
-1:1 复刻 [thinkai.tv](https://www.thinkai.tv) 的 **New API 风格大模型网关**：统一 Base URL、令牌额度、模型广场、操练场、GPT-Image2 生图工作台。
+1:1  **New API 风格大模型网关**：统一 Base URL、令牌额度、模型广场、操练场、GPT-Image2 生图工作台。
 
 技术栈：**Python + FastAPI**（后端）+ **Vue 3 + Vite**（前端）。
 
